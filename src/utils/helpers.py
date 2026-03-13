@@ -3,11 +3,11 @@
 from datetime import date, timedelta
 
 # Program constants
-PROGRAM_START_DATE = date(2026, 1, 6)
+PROGRAM_START_DATE = date(2026, 3, 9)   # Day 1 = March 9 2026 (today = Day 5)
 PROGRAM_TARGET_DATE = date(2026, 10, 19)
-CALORIES_TRAINING = 2000
-CALORIES_REST = 1700
-PROTEIN_TARGET_G = 160.0
+CALORIES_TRAINING = 1700
+CALORIES_REST = 1500
+PROTEIN_TARGET_G = 155.0  # midpoint of 150-160g target
 STEPS_TARGET = 8000
 
 

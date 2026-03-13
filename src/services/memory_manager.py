@@ -15,11 +15,11 @@ _DEFAULT_PROFILE: dict = {
     "age": 27,
     "height_cm": 178,
     "goal": "10-12% body fat by Oct 19, 2026",
-    "start_date": "2026-01-06",
+    "start_date": "2026-03-09",
     "target_date": "2026-10-19",
-    "calorie_target_training": 2000,
-    "calorie_target_rest": 1700,
-    "protein_target_g": 160,
+    "calorie_target_training": 1700,
+    "calorie_target_rest": 1500,
+    "protein_target_g": 155,
     "supplement_stack": ["Multivitamins", "Zinc", "Omega-3"],
 }
 
