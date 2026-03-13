@@ -1,0 +1,25 @@
+# Environment
+.env
+
+# Secrets
+credentials/
+
+# Database
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+dashboard/dist/
+
+# macOS
+.DS_Store
