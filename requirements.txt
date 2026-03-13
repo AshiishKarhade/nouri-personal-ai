@@ -1,0 +1,30 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+
+# Database
+sqlalchemy>=2.0.48
+aiosqlite==0.20.0
+greenlet==3.3.2
+
+# AI
+anthropic==0.40.0
+
+# Google Sheets
+gspread==6.1.4
+google-auth==2.37.0
+
+# Scheduler
+apscheduler==3.10.4
+
+# Image processing
+pillow==11.0.0
+
+# Settings
+pydantic-settings==2.6.1
+
+# Logging
+structlog==24.4.0
+
+# Form data / file uploads
+python-multipart==0.0.18
