@@ -11,7 +11,7 @@ MEMORY_FILE = Path(__file__).parent.parent.parent / "memory" / "memory.md"
 
 # Defaults used when memory.md cannot be parsed
 _DEFAULT_PROFILE: dict = {
-    "name": "Ashish Khatri",
+    "name": "Ashish Karhade",
     "age": 27,
     "height_cm": 178,
     "goal": "10-12% body fat by Oct 19, 2026",
