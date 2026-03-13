@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0A0A0A;
+  --color-bg-card: #141414;
+  --color-text-primary: #F5F5F5;
+  --color-text-secondary: #8A8A8A;
+  --color-accent-green: #22C55E;
+  --color-accent-yellow: #EAB308;
+  --color-accent-red: #EF4444;
+  --color-accent-blue: #3B82F6;
+  --color-accent-purple: #A855F7;
+  --color-border: #262626;
+}
+
+:root {
+  --bg: #0A0A0A;
+  --bg-card: #141414;
+  --text-primary: #F5F5F5;
+  --text-secondary: #8A8A8A;
+  --accent-green: #22C55E;
+  --accent-yellow: #EAB308;
+  --accent-red: #EF4444;
+  --accent-blue: #3B82F6;
+  --accent-purple: #A855F7;
+  --border: #262626;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+@keyframes pulse-skeleton {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
