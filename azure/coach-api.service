@@ -1,0 +1,18 @@
+[Unit]
+Description=Transformation Coach FastAPI
+After=network.target
+
+[Service]
+Type=simple
+User=azureuser
+WorkingDirectory=/opt/transformation-coach
+Environment="PATH=/opt/transformation-coach/.venv/bin:/usr/bin"
+EnvironmentFile=/opt/transformation-coach/.env
+ExecStart=/opt/transformation-coach/.venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
