@@ -1,5 +1,6 @@
 """Meal logging and food photo analysis endpoints."""
 
+import asyncio
 from datetime import date, datetime
 
 import structlog
@@ -16,6 +17,7 @@ from src.models.schemas import (
     MessageResponse,
 )
 from src.services.calorie_tracker import upsert_daily_summary
+from src.services.sheets_sync import sheets_sync
 from src.utils.helpers import compute_cal_mid
 
 log = structlog.get_logger(__name__)
@@ -66,6 +68,29 @@ async def create_meal(body: MealCreate, db: AsyncSession = Depends(get_db)) -> M
 
     await db.refresh(meal)
     log.info("Meal logged", meal_type=body.meal_type, cal_mid=cal_mid, date=str(body.date))
+
+    # Fire-and-forget Sheets sync (meal row)
+    asyncio.create_task(
+        sheets_sync.sync_meal(
+            {
+                "date": meal.date,
+                "day_number": None,
+                "meal_type": meal.meal_type,
+                "time": meal.time or "",
+                "description": meal.description or "",
+                "cal_low": meal.cal_low,
+                "cal_high": meal.cal_high,
+                "cal_mid": meal.cal_mid,
+                "protein_g": meal.protein_g,
+                "carbs_g": meal.carbs_g,
+                "fats_g": meal.fats_g,
+                "fiber_g": meal.fiber_g,
+                "photo_path": meal.photo_path,
+                "ai_analysis": meal.ai_analysis,
+            }
+        )
+    )
+
     return MealResponse.model_validate(meal)
 
 

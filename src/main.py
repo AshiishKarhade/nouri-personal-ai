@@ -13,8 +13,9 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api.router import api_router
 from src.config import settings
-from src.models.database import create_tables
+from src.models.database import AsyncSessionLocal, create_tables
 from src.scheduler.check_ins import create_scheduler
+from src.services.sheets_sync import sheets_sync
 
 log = structlog.get_logger(__name__)
 
@@ -35,6 +36,18 @@ async def lifespan(app: FastAPI):
     scheduler = create_scheduler()
     scheduler.start()
     log.info("Scheduler started", jobs=len(scheduler.get_jobs()))
+
+    # Backfill any DB rows that were written before Sheets sync existed
+    # (or while Sheets was unavailable). Fire-and-forget — never blocks startup.
+    async def _backfill():
+        try:
+            pushed = await sheets_sync.backfill_all(AsyncSessionLocal)
+            log.info("Startup Sheets backfill complete", daily_summaries_pushed=pushed)
+        except Exception:
+            log.exception("Startup Sheets backfill failed — continuing without it")
+
+    import asyncio as _asyncio
+    _asyncio.create_task(_backfill())
 
     yield
 

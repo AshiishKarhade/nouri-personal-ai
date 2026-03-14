@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import structlog
+from sqlalchemy import select, update
 
 from src.config import settings
 
@@ -177,6 +178,130 @@ class SheetsSync:
         await asyncio.get_event_loop().run_in_executor(
             None, self._update_weekly_report_blocking, week_data
         )
+
+    async def backfill_all(self, db_session_factory) -> int:
+        """Push every unsynced DB row to Sheets.
+
+        Reads all meals, daily_summary rows, and measurements that have not
+        yet been synced (``synced_to_sheets == False`` for daily_summary;
+        presence check via date for meals and measurements).
+
+        Returns the number of daily-summary rows pushed.  Designed to be
+        called once at startup or via the admin endpoint.
+        """
+        if not self._enabled:
+            log.info("Sheets sync disabled — skipping backfill")
+            return 0
+
+        # Import here to avoid circular imports at module load time
+        from src.models.database import DailySummary, Meal, Measurement
+
+        pushed = 0
+        try:
+            async with db_session_factory() as session:
+                # ── Meals ──────────────────────────────────────────────────
+                meals_result = await session.execute(select(Meal).order_by(Meal.date, Meal.created_at))
+                meals = meals_result.scalars().all()
+                for meal in meals:
+                    meal_data = {
+                        "date": meal.date,
+                        "day_number": None,  # not on Meal model; Sheets row still gets date
+                        "meal_type": meal.meal_type,
+                        "time": meal.time or "",
+                        "description": meal.description or "",
+                        "cal_low": meal.cal_low,
+                        "cal_high": meal.cal_high,
+                        "cal_mid": meal.cal_mid,
+                        "protein_g": meal.protein_g,
+                        "carbs_g": meal.carbs_g,
+                        "fats_g": meal.fats_g,
+                        "fiber_g": meal.fiber_g,
+                        "photo_path": meal.photo_path,
+                        "ai_analysis": meal.ai_analysis,
+                    }
+                    await self.sync_meal(meal_data)
+
+                log.info("Backfill: meals queued", count=len(meals))
+
+                # ── Daily summaries (unsynced only) ────────────────────────
+                ds_result = await session.execute(
+                    select(DailySummary)
+                    .where(DailySummary.synced_to_sheets == False)  # noqa: E712
+                    .order_by(DailySummary.date)
+                )
+                summaries = ds_result.scalars().all()
+                for summary in summaries:
+                    summary_data = {
+                        "day_number": summary.day_number,
+                        "day_type": summary.day_type or "training",
+                        "cal_target": summary.cal_target,
+                        "cal_actual_mid": summary.cal_actual_mid,
+                        "protein_g": summary.protein_g,
+                        "carbs_g": summary.carbs_g,
+                        "fats_g": summary.fats_g,
+                        "fiber_g": summary.fiber_g,
+                        "meals_count": summary.meals_count,
+                        "steps": summary.steps,
+                        "sleep_hrs": summary.sleep_hrs,
+                        "sleep_quality": summary.sleep_quality,
+                        "workout_done": summary.workout_done,
+                        "coach_notes": summary.coach_notes,
+                        "nouri_notes": summary.nouri_notes,
+                    }
+                    await self.sync_daily_summary(summary.date, summary_data)
+                    # Mark synced in DB so subsequent startups skip it
+                    await session.execute(
+                        update(DailySummary)
+                        .where(DailySummary.id == summary.id)
+                        .values(synced_to_sheets=True)
+                    )
+                    pushed += 1
+
+                await session.commit()
+                log.info("Backfill: daily summaries pushed", count=pushed)
+
+                # ── Measurements ───────────────────────────────────────────
+                meas_result = await session.execute(
+                    select(Measurement).order_by(Measurement.date)
+                )
+                measurements = meas_result.scalars().all()
+                # Build a delta map: each row compared to the previous one
+                prev_weight: Optional[float] = None
+                prev_waist: Optional[float] = None
+                for m in measurements:
+                    weight_delta = (
+                        round(m.weight_kg - prev_weight, 2)
+                        if m.weight_kg is not None and prev_weight is not None
+                        else None
+                    )
+                    waist_delta = (
+                        round(m.waist_cm - prev_waist, 2)
+                        if m.waist_cm is not None and prev_waist is not None
+                        else None
+                    )
+                    meas_data = {
+                        "date": m.date,
+                        "day_number": None,
+                        "week_number": m.week_number,
+                        "weight_kg": m.weight_kg,
+                        "weight_delta_kg": weight_delta,
+                        "waist_cm": m.waist_cm,
+                        "waist_delta_cm": waist_delta,
+                        "body_fat_pct": m.body_fat_pct,
+                        "notes": m.notes,
+                    }
+                    await self.sync_measurement(meas_data)
+                    if m.weight_kg is not None:
+                        prev_weight = m.weight_kg
+                    if m.waist_cm is not None:
+                        prev_waist = m.waist_cm
+
+                log.info("Backfill: measurements queued", count=len(measurements))
+
+        except Exception:
+            log.exception("Backfill to Sheets failed")
+
+        return pushed
 
     # ------------------------------------------------------------------
     # Blocking implementations (run in executor)

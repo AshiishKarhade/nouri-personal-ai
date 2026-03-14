@@ -1,5 +1,6 @@
 """Endpoints for measurements, sleep, steps, and workout logging."""
 
+import asyncio
 from datetime import datetime
 
 import structlog
@@ -18,6 +19,7 @@ from src.models.schemas import (
     StepsLogResponse,
     WorkoutLogCreate,
 )
+from src.services.sheets_sync import sheets_sync
 from src.utils.helpers import get_week_number
 
 log = structlog.get_logger(__name__)
@@ -52,6 +54,42 @@ async def log_measurement(
     await db.flush()
     await db.refresh(measurement)
     log.info("Measurement logged", date=str(body.date), weight=body.weight_kg, waist=body.waist_cm)
+
+    # Compute weight/waist deltas relative to the most recent prior measurement
+    prev_result = await db.execute(
+        select(Measurement)
+        .where(Measurement.date < body.date)
+        .order_by(Measurement.date.desc())
+    )
+    prev = prev_result.scalars().first()
+    weight_delta = (
+        round(measurement.weight_kg - prev.weight_kg, 2)
+        if measurement.weight_kg is not None and prev is not None and prev.weight_kg is not None
+        else None
+    )
+    waist_delta = (
+        round(measurement.waist_cm - prev.waist_cm, 2)
+        if measurement.waist_cm is not None and prev is not None and prev.waist_cm is not None
+        else None
+    )
+
+    # Fire-and-forget Sheets sync
+    asyncio.create_task(
+        sheets_sync.sync_measurement(
+            {
+                "date": measurement.date,
+                "day_number": None,
+                "week_number": measurement.week_number,
+                "weight_kg": measurement.weight_kg,
+                "weight_delta_kg": weight_delta,
+                "waist_cm": measurement.waist_cm,
+                "waist_delta_cm": waist_delta,
+                "body_fat_pct": measurement.body_fat_pct,
+                "notes": measurement.notes,
+            }
+        )
+    )
+
     return MeasurementResponse.model_validate(measurement)
 
 

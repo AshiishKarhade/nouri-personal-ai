@@ -1,9 +1,10 @@
 """Daily calorie and macro tracking service."""
 
+import asyncio
 from datetime import date, datetime
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.database import DailySummary, Meal
@@ -163,8 +164,36 @@ async def upsert_daily_summary(
         summary.fats_g = totals["fats_g"]
         summary.fiber_g = totals["fiber_g"]
         summary.meals_count = totals["meals_count"]
+        # Mark as needing re-sync whenever the summary is updated
+        summary.synced_to_sheets = False
 
         await db.flush()
+
+        # Fire-and-forget Sheets sync — import here to avoid circular import
+        try:
+            from src.services.sheets_sync import sheets_sync
+
+            summary_data = {
+                "day_number": summary.day_number,
+                "day_type": summary.day_type or "training",
+                "cal_target": summary.cal_target,
+                "cal_actual_mid": summary.cal_actual_mid,
+                "protein_g": summary.protein_g,
+                "carbs_g": summary.carbs_g,
+                "fats_g": summary.fats_g,
+                "fiber_g": summary.fiber_g,
+                "meals_count": summary.meals_count,
+                "steps": summary.steps,
+                "sleep_hrs": summary.sleep_hrs,
+                "sleep_quality": summary.sleep_quality,
+                "workout_done": summary.workout_done,
+                "coach_notes": summary.coach_notes,
+                "nouri_notes": summary.nouri_notes,
+            }
+            asyncio.create_task(sheets_sync.sync_daily_summary(for_date, summary_data))
+        except Exception:
+            log.warning("Could not schedule Sheets daily-summary sync", date=str(for_date))
+
         return summary
     except Exception:
         log.exception("Failed to upsert daily summary", date=str(for_date))
