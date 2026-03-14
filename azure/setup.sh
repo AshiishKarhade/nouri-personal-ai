@@ -316,27 +316,14 @@ install_openclaw() {
 EOF
     print_ok "~/.openclaw/openclaw.json written"
 
-    # Onboarding — may prompt for OAuth auth flow
-    echo ""
-    echo -e "${YELLOW}${BOLD}--------------------------------------------------------------${RESET}"
-    echo -e "${YELLOW}${BOLD}  OpenClaw onboarding step — may require interactive input${RESET}"
-    echo -e "${YELLOW}${BOLD}--------------------------------------------------------------${RESET}"
-    echo -e "${CYAN}  OpenClaw uses OpenAI OAuth. If this is the first run on this${RESET}"
-    echo -e "${CYAN}  VM, a browser auth URL will be printed. Open it in your browser,${RESET}"
-    echo -e "${CYAN}  complete OAuth, then return here. The script will continue.${RESET}"
-    echo -e "${YELLOW}${BOLD}--------------------------------------------------------------${RESET}"
-    echo ""
+    # Skip onboard (heavy interactive wizard — OOMs on small VMs).
+    # Config is already written above. Just install the systemd service and start.
+    print_info "Installing OpenClaw gateway as systemd user service..."
+    NODE_OPTIONS="--max-old-space-size=400" openclaw gateway install
 
-    openclaw onboard --install-daemon
-
-    print_ok "OpenClaw onboarding complete"
-
-    # Start the gateway (daemon mode; openclaw onboard may have already done this)
-    if openclaw gateway status 2>/dev/null | grep -qi 'running'; then
-        print_ok "OpenClaw gateway already running"
-    else
-        openclaw gateway start || print_info "Gateway start returned non-zero (may already be managed by systemd daemon)"
-    fi
+    print_info "Starting OpenClaw gateway..."
+    NODE_OPTIONS="--max-old-space-size=400" openclaw gateway start || \
+        print_info "Gateway start returned non-zero (may already be running)"
 
     print_ok "OpenClaw setup done"
 }
