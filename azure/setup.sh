@@ -19,7 +19,7 @@ set -euo pipefail
 # ─── Variables ────────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/AshiishKarhade/nouri-personal-ai.git"
 APP_DIR="/opt/transformation-coach"
-APP_USER="azureuser"
+APP_USER="ashiishk"
 VENV="${APP_DIR}/.venv"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -277,10 +277,17 @@ install_openclaw() {
     # TELEGRAM_USER_ID is set in preflight (falls back to TELEGRAM_CHAT_ID)
     cat > "${HOME}/.openclaw/openclaw.json" <<EOF
 {
-  "agent": {
-    "model": "openai-codex/gpt-5.3-codex"
+  "meta": {
+    "lastTouchedVersion": "2026.3.13"
   },
-  "workspace": "${APP_DIR}/openclaw",
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openai-codex/gpt-5.3-codex"
+      },
+      "workspace": "${APP_DIR}/openclaw"
+    }
+  },
   "channels": {
     "telegram": {
       "enabled": true,
@@ -293,7 +300,17 @@ install_openclaw() {
   "gateway": {
     "port": 18789,
     "mode": "local",
-    "bind": "loopback"
+    "bind": "loopback",
+    "auth": {
+      "mode": "token"
+    }
+  },
+  "plugins": {
+    "entries": {
+      "telegram": {
+        "enabled": true
+      }
+    }
   }
 }
 EOF
