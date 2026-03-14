@@ -1,18 +1,20 @@
 [Unit]
-Description=Transformation Coach FastAPI
+Description=Transformation Coach API
 After=network.target
+Documentation=https://github.com/YOUR_USERNAME/YOUR_REPO
 
 [Service]
 Type=simple
 User=azureuser
 WorkingDirectory=/opt/transformation-coach
-Environment="PATH=/opt/transformation-coach/.venv/bin:/usr/bin"
+Environment="PATH=/opt/transformation-coach/.venv/bin:/home/azureuser/.local/bin:/home/azureuser/.openclaw/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/opt/transformation-coach/.env
 ExecStart=/opt/transformation-coach/.venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=coach-api
 
 [Install]
 WantedBy=multi-user.target
