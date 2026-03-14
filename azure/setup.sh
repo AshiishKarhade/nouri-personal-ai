@@ -263,7 +263,10 @@ install_openclaw() {
     fi
 
     # Ensure openclaw is on PATH for the current session
-    export PATH="${HOME}/.local/bin:${HOME}/.openclaw/bin:${PATH}"
+    export PATH="${HOME}/.npm-global/bin:${HOME}/.local/bin:${HOME}/.openclaw/bin:${PATH}"
+    # Persist to .bashrc so future sessions have it too
+    grep -qxF 'export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.openclaw/bin:$PATH"' "${HOME}/.bashrc" || \
+        echo 'export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.openclaw/bin:$PATH"' >> "${HOME}/.bashrc"
 
     if ! command -v openclaw &>/dev/null; then
         print_error "openclaw binary not found after install. Check PATH."
