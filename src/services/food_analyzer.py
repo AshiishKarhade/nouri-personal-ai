@@ -1,4 +1,4 @@
-"""Claude Vision API integration for food photo analysis."""
+"""OpenAI GPT-4o Vision API integration for food photo analysis."""
 
 import base64
 import io
@@ -68,7 +68,7 @@ def _strip_markdown_fences(text: str) -> str:
 
 
 def _parse_response(raw: str) -> tuple[list[FoodItem], FoodAnalysisTotal, Optional[str], bool]:
-    """Parse the raw Claude response into structured fields.
+    """Parse the raw GPT-4o response into structured fields.
 
     Returns (items, total, notes, parse_failed).
     """
@@ -120,13 +120,13 @@ async def analyze_food_photo(
     base64_image: str,
     mime_type: str = "image/jpeg",
 ) -> FoodAnalysisResponse:
-    """Call Claude Vision API and return a structured food analysis.
+    """Call OpenAI GPT-4o Vision API and return a structured food analysis.
 
     Never raises — on any failure, returns a response with parse_failed=True
     and the raw response text for manual review.
     """
     try:
-        import anthropic  # imported lazily to avoid hard startup dep
+        import openai  # imported lazily to avoid hard startup dep
 
         # Decode, resize if needed, re-encode
         raw_bytes = base64.b64decode(base64_image)
@@ -135,12 +135,12 @@ async def analyze_food_photo(
             base64_image = base64.b64encode(resized_bytes).decode("utf-8")
             mime_type = "image/jpeg"  # Pillow always outputs JPEG
 
-        client = anthropic.AsyncAnthropic(
-            api_key=settings.anthropic_api_key,
+        client = openai.AsyncOpenAI(
+            api_key=settings.openai_api_key,
         )
 
-        message = await client.messages.create(
-            model="claude-sonnet-4-6",
+        response = await client.chat.completions.create(
+            model="gpt-4o",
             max_tokens=1024,
             timeout=30.0,
             messages=[
@@ -148,11 +148,9 @@ async def analyze_food_photo(
                     "role": "user",
                     "content": [
                         {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": mime_type,
-                                "data": base64_image,
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mime_type};base64,{base64_image}",
                             },
                         },
                         {
@@ -164,7 +162,7 @@ async def analyze_food_photo(
             ],
         )
 
-        raw_text = message.content[0].text
+        raw_text = response.choices[0].message.content or ""
         log.debug("Food analysis raw response", preview=raw_text[:300])
 
         items, total, notes, parse_failed = _parse_response(raw_text)
