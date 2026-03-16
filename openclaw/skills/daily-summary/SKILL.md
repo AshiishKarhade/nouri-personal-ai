@@ -8,7 +8,9 @@ triggers:
 # Daily Summary Skill
 
 ## Fetch Summary
-Call: GET http://localhost:8000/api/v1/today
+```bash
+curl -s http://localhost:8000/api/v1/today
+```
 
 ## Format Response
 Present as a clean summary:

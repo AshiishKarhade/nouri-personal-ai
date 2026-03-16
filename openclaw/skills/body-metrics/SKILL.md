@@ -7,25 +7,35 @@ triggers:
 
 # Body Metrics Skill
 
+## CRITICAL: Always use curl to call the API. NEVER write to memory files.
+
 ## Sleep Logging
-Pattern: "slept X hours" or "sleep was X/5"
-Call: POST http://localhost:8000/api/v1/sleep
-Body: { "hours": X, "quality": Y (optional, 1-5), "date": "<today>" }
+```bash
+curl -s -X POST http://localhost:8000/api/v1/sleep \
+  -H "Content-Type: application/json" \
+  -d '{"hours": X, "quality": Y, "date": "<YYYY-MM-DD>"}'
+```
 
 ## Steps Logging
-Pattern: "X steps today" or "walked X steps"
-Call: POST http://localhost:8000/api/v1/steps
-Body: { "steps": X, "date": "<today>" }
+```bash
+curl -s -X POST http://localhost:8000/api/v1/steps \
+  -H "Content-Type: application/json" \
+  -d '{"step_count": X, "date": "<YYYY-MM-DD>"}'
+```
 
 ## Workout Logging
-Pattern: "did gym", "trained today", "rest day"
-Call: POST http://localhost:8000/api/v1/workout
-Body: { "done": true/false, "notes": "<optional notes>", "date": "<today>" }
+```bash
+curl -s -X POST http://localhost:8000/api/v1/workout \
+  -H "Content-Type: application/json" \
+  -d '{"done": true, "notes": "<notes>", "activity_type": "gym", "date": "<YYYY-MM-DD>"}'
+```
 
 ## Measurement Logging
-Pattern: "weight X kg", "waist X cm"
-Call: POST http://localhost:8000/api/v1/measurements
-Body: { "weight_kg": X, "waist_cm": Y, "date": "<today>" }
+```bash
+curl -s -X POST http://localhost:8000/api/v1/measurements \
+  -H "Content-Type: application/json" \
+  -d '{"weight_kg": X, "waist_cm": Y, "date": "<YYYY-MM-DD>"}'
+```
 
 ## Response Format
 Confirm what was logged. If steps < 8000, flag it. If sleep < 7 hours, note recovery impact.

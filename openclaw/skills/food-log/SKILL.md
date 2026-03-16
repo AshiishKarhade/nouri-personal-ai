@@ -8,20 +8,32 @@ triggers:
 
 # Food Log Skill
 
+## CRITICAL: Always use curl to call the API. NEVER write to memory files.
+
 ## On Text Message
-When user reports eating something (e.g., "had 2 rotis and dal"), call:
-POST http://localhost:8000/api/v1/meals
-Body: { "description": "<user's exact words>", "meal_type": "<inferred type>", "date": "<today>" }
+When user reports eating something (e.g., "had 2 rotis and dal"), use bash:
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/meals \
+  -H "Content-Type: application/json" \
+  -d '{"description": "<user exact words>", "meal_type": "<breakfast|lunch|dinner|snack|pre_workout|post_workout>", "date": "<YYYY-MM-DD>"}'
+```
 
 ## On Photo Message
 When user sends a food photo, call:
-POST http://localhost:8000/api/v1/analyze-photo
-Body: { "base64_image": "<base64>", "mime_type": "image/jpeg" }
 
-Then present the analysis to the user and ask for confirmation:
-"I see: [item list with cals]. Total: ~X-Y calories, Zg protein. Should I log this?"
+```bash
+curl -s -X POST http://localhost:8000/api/v1/analyze-photo \
+  -H "Content-Type: application/json" \
+  -d '{"base64_image": "<base64_string>", "mime_type": "image/jpeg"}'
+```
 
-On confirmation, call POST /api/v1/meals with the analyzed data.
+Then present the analysis and ask for confirmation before logging with POST /api/v1/meals.
+
+## Get Daily Totals
+```bash
+curl -s http://localhost:8000/api/v1/today
+```
 
 ## Response Format
 Always report:
