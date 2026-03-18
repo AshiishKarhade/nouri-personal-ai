@@ -37,7 +37,27 @@ async def get_meals_for_date(
 
 @router.post("/meals", response_model=MealResponse, status_code=201)
 async def create_meal(body: MealCreate, db: AsyncSession = Depends(get_db)) -> MealResponse:
-    cal_mid = compute_cal_mid(body.cal_low, body.cal_high)
+    # Auto-analyze description if no calorie data was provided
+    cal_low, cal_high, protein_g, carbs_g, fats_g, fiber_g, ai_analysis = (
+        body.cal_low, body.cal_high, body.protein_g,
+        body.carbs_g, body.fats_g, body.fiber_g, body.ai_analysis,
+    )
+    if cal_low is None and body.description:
+        try:
+            from src.services.food_analyzer import analyze_food_text
+            analysis = await analyze_food_text(body.description)
+            t = analysis.total
+            cal_low = t.calories_low
+            cal_high = t.calories_high
+            protein_g = t.protein_g
+            carbs_g = t.carbs_g
+            fats_g = t.fats_g
+            fiber_g = t.fiber_g
+            ai_analysis = analysis.notes
+        except Exception:
+            log.warning("Auto food analysis failed, storing without calories", desc=body.description)
+
+    cal_mid = compute_cal_mid(cal_low, cal_high)
     now_str = datetime.now().strftime("%H:%M")
 
     meal = Meal(
@@ -45,15 +65,15 @@ async def create_meal(body: MealCreate, db: AsyncSession = Depends(get_db)) -> M
         meal_type=body.meal_type,
         time=body.time or now_str,
         description=body.description,
-        cal_low=body.cal_low,
-        cal_high=body.cal_high,
+        cal_low=cal_low,
+        cal_high=cal_high,
         cal_mid=cal_mid,
-        protein_g=body.protein_g,
-        carbs_g=body.carbs_g,
-        fats_g=body.fats_g,
-        fiber_g=body.fiber_g,
+        protein_g=protein_g,
+        carbs_g=carbs_g,
+        fats_g=fats_g,
+        fiber_g=fiber_g,
         photo_path=body.photo_path,
-        ai_analysis=body.ai_analysis,
+        ai_analysis=ai_analysis,
         raw_input=body.raw_input,
         parse_failed=False,
     )

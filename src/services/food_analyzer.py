@@ -116,6 +116,45 @@ def _parse_response(raw: str) -> tuple[list[FoodItem], FoodAnalysisTotal, Option
     return items, total, notes, False
 
 
+async def analyze_food_text(description: str) -> FoodAnalysisResponse:
+    """Estimate calories/macros from a text description using GPT-4o-mini."""
+    try:
+        import openai
+
+        client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            max_tokens=512,
+            timeout=20.0,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a nutrition expert specializing in Indian cuisine. "
+                        "Given a food description, return a JSON object with the same structure as a food photo analysis: "
+                        '{"items": [...], "total": {"calories": {"low": X, "high": Y}, "protein_g": X, "carbs_g": X, "fats_g": X, "fiber_g": X}, "notes": "..."}'
+                        " Use realistic ranges for Indian home-cooked food. Never refuse."
+                    ),
+                },
+                {"role": "user", "content": f"Food: {description}"},
+            ],
+        )
+        raw_text = response.choices[0].message.content or ""
+        items, total, notes, parse_failed = _parse_response(raw_text)
+        return FoodAnalysisResponse(
+            items=items, total=total, notes=notes,
+            parse_failed=parse_failed,
+            raw_response=raw_text if parse_failed else None,
+        )
+    except Exception:
+        log.exception("Text food analysis failed")
+        return FoodAnalysisResponse(
+            items=[], total=FoodAnalysisTotal(),
+            notes=None, parse_failed=True,
+            raw_response="Text analysis failed.",
+        )
+
+
 async def analyze_food_photo(
     base64_image: str,
     mime_type: str = "image/jpeg",
